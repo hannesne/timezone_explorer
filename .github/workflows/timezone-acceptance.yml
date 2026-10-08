@@ -1,0 +1,70 @@
+name: Timezone acceptance v1
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: timezone-v1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    name: ${{ matrix.check }}
+    runs-on: [ubuntu-24.04]
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - criterion: clean-install
+            check: timezone-clean-install-v1
+          - criterion: typecheck
+            check: timezone-typecheck-v1
+          - criterion: build
+            check: timezone-build-v1
+          - criterion: timezone-tests
+            check: timezone-unit-v1
+          - criterion: browser
+            check: timezone-browser-v1
+    steps:
+      - name: Checkout immutable candidate
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.21.0
+          check-latest: false
+      - name: Install trusted tools
+        run: |
+          npm install --global npm@11.7.0 --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --prefix candidate/.github/trusted-validation --no-audit --no-fund
+          node candidate/.github/trusted-validation/node_modules/@playwright/test/cli.js install chromium
+      - name: Trusted acceptance v1
+        env:
+          CANDIDATE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          MERGE_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          TESTED_REVISION_KIND: ${{ github.event_name == 'pull_request' && 'Merge' || 'Head' }}
+          PROOF_DIRECTORY: ${{ runner.temp }}/timezone-proof-${{ matrix.criterion }}
+        run: |
+          node candidate/.github/trusted-validation/runner.mjs \
+            --candidate "$GITHUB_WORKSPACE/candidate" \
+            --criterion "${{ matrix.criterion }}" \
+            --output "$PROOF_DIRECTORY"
+      - name: Retain authoritative proof v1
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: timezone-proof-v1-${{ matrix.criterion }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/timezone-proof-${{ matrix.criterion }}
+          if-no-files-found: error
+          retention-days: 14
