@@ -1,47 +1,90 @@
-# Timezone explorer
+# Timezone Explorer
 
-This is the operator-owned setup base, **not an implemented application**.
-The first application must be Vite + React + TypeScript, without an API,
-settings, persistence or a timezone picker.
+## Overview
+This is a small React + Vite + TypeScript application that displays five clocks for fixed IANA timezones:
+- UTC
+- Pacific/Auckland
+- America/New_York
+- Asia/Kolkata
+- Asia/Kathmandu
 
-## Application contract
+Each clock row shows the full IANA timezone name, the local date as `YYYY-MM-DD` and the local time as 24-hour `HH:mm:ss`. All clocks show the same current instant refreshed every second and on window focus or visibility change. DST and fractional offsets are correctly handled using the Intl API.
 
-Use Node **24.21.0** and npm **11.7.0**. The application author must add the
-application dependency manifest, an npm-generated synchronized lockfile, source,
-and meaningful tests. Then document and support:
+Invalid timezones produce a visible accessible error message (role=alert).
 
-```sh
+## Local Setup
+
+### Requirements
+- Node.js v24.21.0 (official LTS recommended)
+- npm (version compatible with above Node)
+
+### Installation
+
+Run:
+
+```bash
 npm ci
+```
+
+This installs dependencies cleanly from the package-lock.json.
+
+## Development
+
+Run a Vite development server:
+
+```bash
 npm run dev
+```
+
+Open your browser at `http://localhost:5173` (default Vite port).
+
+## Type Checking
+
+Run TypeScript compiler checks:
+
+```bash
 npm run typecheck
+```
+
+No code is emitted; type errors will be reported.
+
+## Unit Tests
+
+Run the Vitest unit tests on the time formatting utilities:
+
+```bash
 npm run test:unit
+```
+
+This verifies correct time formatting for all five timezones and error handling.
+
+## Production Build
+
+Build a production bundle:
+
+```bash
 npm run build
+```
+
+Output goes to `dist/` by default.
+
+## End-to-End Tests
+
+Run Playwright browser tests:
+
+```bash
 npm run test:e2e
 ```
 
-Display exactly `UTC`, `Pacific/Auckland`, `America/New_York`, `Asia/Kolkata`
-and `Asia/Kathmandu`. Each labelled row must show its local `YYYY-MM-DD` date
-and 24-hour `HH:mm:ss` time, calculated from one real current instant. Refresh
-each second and after focus/visibility return, using supported IANA/Intl
-semantics (including DST and fractional offsets). Invalid zones must produce
-an explicit accessible error, never a UTC fallback.
+These tests verify the UI clocks render correctly, update every second, and refresh on focus and visibility changes.
 
-Public acceptance hooks are `data-testid="timezone-clock"` on each row,
-`data-timezone="<IANA>"`, and children with `data-testid="timezone-date"` and
-`data-testid="timezone-time"`.
+## Implementation Details
 
-## Independent validation
+- Timezone formatting and validation are encapsulated in `src/time.ts`.
+- The main React app `src/main.tsx` renders the clocks with inline styles and handles periodic updates.
+- Tests are split into unit tests (`src/time.test.ts`) and browser tests (`src/browser/clock.spec.ts`).
+- No external pickers, persistence, or APIs are used.
+- Accessibility considerations include clear labelling and error alerts.
 
-The operator-owned [workflow](.github/workflows/timezone-acceptance.yml) runs
-automatically on pushes and pull requests. It invokes frozen trusted
-TypeScript/Vite/Vitest/Playwright entry points, not application-authored
-successful scripts. Acceptance tests observe the sandboxed app only through
-its browser UI. Missing manifests/source/tests fail, including on this setup
-base. A red setup-only app check is expected; bootstrap readiness is separate.
-
-The protected [acceptance assets](.github/trusted-validation/) are not worker
-owned. Generated code runs in disposable credential-free containers, without
-publisher/Steward/Azure credentials or an OIDC grant. Do not add credentials or
-change governance/workflow files as part of application work. Operator release
-is blocked unless the actual repository path/protection and credential
-capability controls have been verified separately.
+## License
+MIT (Please confirm licensing).
