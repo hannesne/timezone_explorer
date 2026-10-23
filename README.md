@@ -1,47 +1,84 @@
-# Timezone explorer
+# Timezone Explorer
 
-This is the operator-owned setup base, **not an implemented application**.
-The first application must be Vite + React + TypeScript, without an API,
-settings, persistence or a timezone picker.
+This project is a Timezone Explorer built with React, TypeScript, and Vite. It displays five fixed clocks with accurate date and time for different IANA time zones, refreshing every second and on window focus/visibility changes.
 
-## Application contract
+## Features
 
-Use Node **24.21.0** and npm **11.7.0**. The application author must add the
-application dependency manifest, an npm-generated synchronized lockfile, source,
-and meaningful tests. Then document and support:
+- Five fixed timezone clocks: UTC, Pacific/Auckland, America/New_York, Asia/Kolkata, Asia/Kathmandu.
+- Shows current date (YYYY-MM-DD) and 24-hour time (HH:mm:ss) precisely from a single instant.
+- Respects IANA timezone rules including DST and fractional offsets.
+- Refreshes every second and immediately on window focus and visibility.
+- Accessible and readable inline CSS layout.
+- Explicit error display for invalid timezones.
 
-```sh
+## Setup and Development
+
+### Prerequisites
+- Node.js 24.x
+- npm 11.x
+
+### Install
+
+Run a clean install of dependencies:
+
+```
 npm ci
+```
+
+### Development
+
+Run the development server with Vite:
+
+```
 npm run dev
+```
+
+Open your browser at `http://localhost:5173` (or as indicated by Vite).
+
+### Type Checking
+
+Run TypeScript type checking:
+
+```
 npm run typecheck
+```
+
+### Unit Tests
+
+Run unit tests with Vitest:
+
+```
 npm run test:unit
+```
+
+### Production Build
+
+Build the optimized production bundle:
+
+```
 npm run build
+```
+
+### End-to-End Tests
+
+Run Playwright browser tests:
+
+```
 npm run test:e2e
 ```
 
-Display exactly `UTC`, `Pacific/Auckland`, `America/New_York`, `Asia/Kolkata`
-and `Asia/Kathmandu`. Each labelled row must show its local `YYYY-MM-DD` date
-and 24-hour `HH:mm:ss` time, calculated from one real current instant. Refresh
-each second and after focus/visibility return, using supported IANA/Intl
-semantics (including DST and fractional offsets). Invalid zones must produce
-an explicit accessible error, never a UTC fallback.
+## File Structure
+- `index.html`: Application entry HTML.
+- `src/main.tsx`: React main application and mounting logic.
+- `src/time.ts`: Timezone date-time formatting with stable consistent API.
+- `src/time.test.mts`: Unit tests for time formatting.
+- `src/playwright.config.mts`: Playwright test configuration.
+- `src/browser/clock.spec.mts`: Browser/Playwright tests for UI clocks.
+- `package.json`: Scripts and dependency declarations.
 
-Public acceptance hooks are `data-testid="timezone-clock"` on each row,
-`data-timezone="<IANA>"`, and children with `data-testid="timezone-date"` and
-`data-testid="timezone-time"`.
+## Notes
+- The clocks use one actual single timestamp refreshed every second and on focus/visibility.
+- The app strictly uses native Intl for timezone handling and validates timezone identifiers.
+- No timezone picker or settings; timezone list fixed as per requirements.
 
-## Independent validation
-
-The operator-owned [workflow](.github/workflows/timezone-acceptance.yml) runs
-automatically on pushes and pull requests. It invokes frozen trusted
-TypeScript/Vite/Vitest/Playwright entry points, not application-authored
-successful scripts. Acceptance tests observe the sandboxed app only through
-its browser UI. Missing manifests/source/tests fail, including on this setup
-base. A red setup-only app check is expected; bootstrap readiness is separate.
-
-The protected [acceptance assets](.github/trusted-validation/) are not worker
-owned. Generated code runs in disposable credential-free containers, without
-publisher/Steward/Azure credentials or an OIDC grant. Do not add credentials or
-change governance/workflow files as part of application work. Operator release
-is blocked unless the actual repository path/protection and credential
-capability controls have been verified separately.
+This project requires independent CI for verification and testing as no local runs were conducted during source generation.
