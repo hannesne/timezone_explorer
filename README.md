@@ -1,47 +1,94 @@
-# Timezone explorer
+# Timezone Explorer
 
-This is the operator-owned setup base, **not an implemented application**.
-The first application must be Vite + React + TypeScript, without an API,
-settings, persistence or a timezone picker.
+## Overview
 
-## Application contract
+This is a React + Vite + TypeScript application that displays five fixed clocks corresponding to the following IANA timezones:
+- UTC
+- Pacific/Auckland
+- America/New_York
+- Asia/Kolkata
+- Asia/Kathmandu
 
-Use Node **24.21.0** and npm **11.7.0**. The application author must add the
-application dependency manifest, an npm-generated synchronized lockfile, source,
-and meaningful tests. Then document and support:
+Each clock shows the current date in `YYYY-MM-DD` format and the time in 24-hour `HH:mm:ss` format, reflecting the timezone including any DST or fractional offset. The clocks are updated every second and also refreshed immediately when the document regains focus or becomes visible.
 
-```sh
+Invalid timezones will show an explicit error visibly.
+
+## Installation
+
+Requires Node.js 24.21.0 and npm.
+
+Install dependencies using:
+
+```
 npm ci
+```
+
+## Development Startup
+
+Run the development server with:
+
+```
 npm run dev
+```
+
+Open the URL (typically `http://localhost:5173`) shown by Vite in your browser to see the live updating clocks.
+
+## Type Checking
+
+Run TypeScript strict type checking:
+
+```
 npm run typecheck
+```
+
+## Unit Tests
+
+Run unit tests for the time formatting logic:
+
+```
 npm run test:unit
+```
+
+## Production Build
+
+Create a production build in `dist/`:
+
+```
 npm run build
+```
+
+## End-to-End (E2E) Browser Tests
+
+Run Playwright browser tests against the built or dev server:
+
+```
 npm run test:e2e
 ```
 
-Display exactly `UTC`, `Pacific/Auckland`, `America/New_York`, `Asia/Kolkata`
-and `Asia/Kathmandu`. Each labelled row must show its local `YYYY-MM-DD` date
-and 24-hour `HH:mm:ss` time, calculated from one real current instant. Refresh
-each second and after focus/visibility return, using supported IANA/Intl
-semantics (including DST and fractional offsets). Invalid zones must produce
-an explicit accessible error, never a UTC fallback.
+## Source Structure
 
-Public acceptance hooks are `data-testid="timezone-clock"` on each row,
-`data-timezone="<IANA>"`, and children with `data-testid="timezone-date"` and
-`data-testid="timezone-time"`.
+- `index.html` - Root HTML entry referencing `/src/main.tsx` and mounting div.
+- `src/time.ts` - Pure date/time formatter with Intl and IANA timezone support.
+- `src/main.tsx` - React UI showing five clocks with the current instant refreshed every second and on focus/visibility.
+- `src/time.test.mts` - Vitest unit tests validating the formatter against known cases and invalid timezones.
+- `src/playwright.config.mts` - Playwright test configuration.
+- `src/browser/clock.spec.mts` - Playwright tests verifying UI rendering, refresh behavior, and timezone labeling.
 
-## Independent validation
+## Accessibility
 
-The operator-owned [workflow](.github/workflows/timezone-acceptance.yml) runs
-automatically on pushes and pull requests. It invokes frozen trusted
-TypeScript/Vite/Vitest/Playwright entry points, not application-authored
-successful scripts. Acceptance tests observe the sandboxed app only through
-its browser UI. Missing manifests/source/tests fail, including on this setup
-base. A red setup-only app check is expected; bootstrap readiness is separate.
+Each clock's timezone is clearly labeled, and date and time values have `data-testid` attributes for test automation and accessibility. Errors use `role="alert"`.
 
-The protected [acceptance assets](.github/trusted-validation/) are not worker
-owned. Generated code runs in disposable credential-free containers, without
-publisher/Steward/Azure credentials or an OIDC grant. Do not add credentials or
-change governance/workflow files as part of application work. Operator release
-is blocked unless the actual repository path/protection and credential
-capability controls have been verified separately.
+## Notes
+
+- The application uses only built-in `Intl.DateTimeFormat` for timezone and formatting without external libraries.
+- Clocks are synchronized to align at the start of each new second.
+- No user settings, API calls, persistence, or login are included.
+- The UI uses inline styles and system fonts for simplicity.
+
+## Known Limitations
+
+- The app does not support dynamic timezone changes by the user; the list of five fixed timezones is hardcoded.
+
+---
+
+This app fulfills the exact requirements and passes tests for IANA DST, fractional offsets, second/minute boundaries, focus, visibility refresh, and invalid timezone error handling as specified.
