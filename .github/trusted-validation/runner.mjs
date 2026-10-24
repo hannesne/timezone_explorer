@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { lstat, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { isIPv4 } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -9,6 +10,28 @@ const trusted = dirname(fileURLToPath(import.meta.url));
 const digest = bytes => "sha256:" + createHash("sha256").update(bytes).digest("hex");
 const gitBlob = bytes => createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
 const requiredScripts = ["dev", "typecheck", "test:unit", "build", "test:e2e"];
+
+export function internalServerUrl(container, network, name) {
+  const networkName = `${name}-network`;
+  const endpoint = container?.NetworkSettings?.Networks?.[networkName];
+  const membership = network?.Containers?.[container?.Id];
+  const ip = endpoint?.IPAddress;
+  const privateAddress = typeof ip === "string" && isIPv4(ip)
+    && /^(?:10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)/.test(ip);
+  if (!/^timezone-v1-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(name)
+    || !/^[0-9a-f]{64}$/.test(container?.Id ?? "") || container.Name !== `/${name}`
+    || container.State?.Running !== true || container.HostConfig?.NetworkMode !== networkName
+    || Object.keys(container.HostConfig.PortBindings ?? {}).length !== 0
+    || Object.keys(container.NetworkSettings?.Networks ?? {}).length !== 1
+    || network?.Name !== networkName || network.Driver !== "bridge" || network.Internal !== true
+    || !/^[0-9a-f]{64}$/.test(network.Id ?? "") || endpoint?.NetworkID !== network.Id
+    || Object.keys(network.Containers ?? {}).length !== 1 || membership?.Name !== name
+    || !/^[0-9a-f]{64}$/.test(endpoint?.EndpointID ?? "") || membership.EndpointID !== endpoint.EndpointID
+    || !privateAddress || !new RegExp(`^${ip.replaceAll(".", "\\.")}/(?:[1-9]|[12]\\d|3[0-2])$`).test(membership.IPv4Address ?? "")) {
+    throw new Error("Sandbox server is not the sole running member of its exact owned internal network without published ports.");
+  }
+  return `http://${ip}:4173`;
+}
 
 export async function validateCandidate(directory) {
   const candidate = resolve(directory);
@@ -181,11 +204,12 @@ export async function runAcceptance({ candidate, criterion, output }) {
       await checked("docker", ["network", "create", "--internal", network]);
       networkCreated = true;
       await checked("docker", ["run", "--detach", "--name", name, ...base, "--network", network,
-        "--publish", "127.0.0.1::4173", policy.sandboxImage, "node", "/trusted/sandbox.mjs", "serve"]);
+        policy.sandboxImage, "node", "/trusted/sandbox.mjs", "serve"]);
       serverStarted = true;
-      const port = (await checked("docker", ["port", name, "4173/tcp"])).stdout.trim();
-      if (!/^127\.0\.0\.1:\d+$/.test(port)) throw new Error("Sandbox server is not bound only to loopback.");
-      const url = `http://${port}`;
+      const containers = JSON.parse((await checked("docker", ["inspect", name])).stdout);
+      const networks = JSON.parse((await checked("docker", ["network", "inspect", network])).stdout);
+      if (containers.length !== 1 || networks.length !== 1) throw new Error("Exact owned sandbox and network inspection required.");
+      const url = internalServerUrl(containers[0], networks[0], name);
       let responsive = false;
       for (let attempt = 0; attempt < 30; attempt++) {
         try { responsive = (await fetch(url, { signal: AbortSignal.timeout(1000), redirect: "error" })).ok; }
@@ -212,6 +236,11 @@ export async function runAcceptance({ candidate, criterion, output }) {
     }
   } catch (error) {
     failure = error;
+    if (serverStarted) {
+      const diagnostics = await command("docker", ["logs", "--tail", "100", name]);
+      logs.push({ program: "docker", operation: "logs", code: diagnostics.code,
+        stdout: diagnostics.stdout, stderr: diagnostics.stderr });
+    }
   } finally {
     if (serverStarted) {
       const stopped = await command("docker", ["rm", "--force", name]);
