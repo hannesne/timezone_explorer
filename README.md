@@ -1,47 +1,59 @@
-# Timezone explorer
+# Timezone Explorer
 
-This is the operator-owned setup base, **not an implemented application**.
-The first application must be Vite + React + TypeScript, without an API,
-settings, persistence or a timezone picker.
+This is a Vite + React + TypeScript application to display an explorer for five fixed timezones:
 
-## Application contract
+- UTC
+- Pacific/Auckland
+- America/New_York
+- Asia/Kolkata
+- Asia/Kathmandu
 
-Use Node **24.21.0** and npm **11.7.0**. The application author must add the
-application dependency manifest, an npm-generated synchronized lockfile, source,
-and meaningful tests. Then document and support:
+Features:
 
-```sh
-npm ci
-npm run dev
-npm run typecheck
-npm run test:unit
-npm run build
-npm run test:e2e
-```
+- Shows the current date (YYYY-MM-DD) and 24-hour time (HH:mm:ss) for each timezone
+- Refreshes every second and updates immediately on window focus or visibility change
+- Uses IANA timezone database with DST and fractional offsets awareness
+- Reports timezone errors visibly
+- Accessible layout with stable timezone hooks
 
-Display exactly `UTC`, `Pacific/Auckland`, `America/New_York`, `Asia/Kolkata`
-and `Asia/Kathmandu`. Each labelled row must show its local `YYYY-MM-DD` date
-and 24-hour `HH:mm:ss` time, calculated from one real current instant. Refresh
-each second and after focus/visibility return, using supported IANA/Intl
-semantics (including DST and fractional offsets). Invalid zones must produce
-an explicit accessible error, never a UTC fallback.
+## Node and Package Manager
 
-Public acceptance hooks are `data-testid="timezone-clock"` on each row,
-`data-timezone="<IANA>"`, and children with `data-testid="timezone-date"` and
-`data-testid="timezone-time"`.
+- Node.js version: 24.21.0
+- Package manager: npm
 
-## Independent validation
+## Installation
 
-The operator-owned [workflow](.github/workflows/timezone-acceptance.yml) runs
-automatically on pushes and pull requests. It invokes frozen trusted
-TypeScript/Vite/Vitest/Playwright entry points, not application-authored
-successful scripts. Acceptance tests observe the sandboxed app only through
-its browser UI. Missing manifests/source/tests fail, including on this setup
-base. A red setup-only app check is expected; bootstrap readiness is separate.
+Run `npm ci` to clean install dependencies based on the locked package-lock.json.
 
-The protected [acceptance assets](.github/trusted-validation/) are not worker
-owned. Generated code runs in disposable credential-free containers, without
-publisher/Steward/Azure credentials or an OIDC grant. Do not add credentials or
-change governance/workflow files as part of application work. Operator release
-is blocked unless the actual repository path/protection and credential
-capability controls have been verified separately.
+## Development
+
+Run `npm run dev` to start the development server with hot reload.
+
+## Type Checking
+
+Run `npm run typecheck` to perform a strict TypeScript check without emitting any files.
+
+## Unit Testing
+
+Run `npm run test:unit` to run the Vitest tests for timezone formatting.
+
+## Production Build
+
+Run `npm run build` to produce a production-optimized build with Vite.
+
+## End-to-End Browser Testing
+
+Run `npm run test:e2e` to perform Playwright tests for the timezone clocks UI.
+
+## File Structure
+
+- `index.html` - HTML entry point mounting React app
+- `src/time.ts` - Pure timezone formatting utilities
+- `src/main.tsx` - React UI app rendering five clocks
+- `src/time.test.mts` - Vitest unit tests for timezone formatting
+- `src/playwright.config.mts` - Playwright configuration
+- `src/browser/clock.spec.mts` - Playwright UI tests for the clock component
+
+No external settings, persistence, login, or API calls are included.
+
+-- End of README --
